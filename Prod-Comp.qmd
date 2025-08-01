@@ -1,0 +1,192 @@
+---
+title: "Sample"
+format: html
+editor: source
+---
+
+```{r}
+library(tidyverse)
+library(lme4)
+sample <- read.csv("~/Downloads/prod-comp-20250715.csv") #Change CSV here
+View(sample)
+```
+
+```{r}
+df_grouped <- sample |> 
+  filter(difficulty != 0, rt > 100) |>
+  group_by(task, ppt_id, correct) |>
+  summarise(n = n())
+```
+
+```{r}
+df_demo <- filter(sample, task != "production", task != "comprehension") |> 
+  select(ppt_id, response.age, response.gender)
+```
+
+```{r}
+df_joined <- df_grouped |> left_join(df_demo, join_by(ppt_id)) 
+```
+
+```{r}
+ggplot(
+  data = df_joined |> filter(correct == "true"),
+  mapping = aes(
+    x = response.age,
+    y = n,
+    colour = task)
+  ) +
+  geom_point(size = 3) +
+  geom_smooth(linewidth = 1) +
+  labs(
+    title = "Production & Comprehension Gap\nthrough Age",
+    x = "Age",
+    y = "Number Correct",
+    colour = "Task"
+  ) +
+  scale_x_continuous(
+    breaks = seq(floor(min(df_joined$response.age)),
+                 ceiling(max(df_joined$response.age)), 1)
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    legend.position = "right"
+  )
+```
+```{r}
+model1 <- lm(n ~ response.age*task,
+            data = df_joined)
+summary(model)
+```
+
+```{r}
+ggplot(
+  data = df_joined |> filter(correct == "true"),
+  aes(
+    x = response.age,
+    y = n,
+    colour = task,
+    shape = response.gender
+  )
+) +
+  geom_point(size = 3) +
+  geom_smooth(
+    aes(
+      linetype = response.gender,
+      group = interaction(task, response.gender)
+    ),
+    method = "lm",
+    se = FALSE,
+    linewidth = 1
+  ) +
+  scale_shape_manual(values = c("female" = 16, "male" = 17)) +
+  scale_linetype_manual(
+    name = "Line Style",
+    values = c("female" = "dotted", "male" = "solid"),
+    labels = c("Female (dotted)", "Male (solid)")
+  ) +
+  labs(
+    title = "Production & Comprehension Differences\nConsidering Sex",
+    x = "Age",
+    y = "Number Correct",
+    colour = "Task",
+    shape = "Gender"
+  ) +
+  guides(
+    linetype = guide_legend(override.aes = list(colour = "black"))
+  ) +
+  scale_x_continuous(breaks = seq(floor(min(df_joined$response.age)),
+                                  ceiling(max(df_joined$response.age)), 1)) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold")
+  )
+```
+
+```{r}
+model2 <- lm(n ~ response.age*task*response.gender,
+            data = df_joined)
+summary(model)
+```
+```{r}
+df_comprehension <- sample |>
+  filter(
+    task == "comprehension",
+    difficulty != 0,
+    rt > 100
+  ) |>
+  select(ppt_id, difficulty, rt, correct) |>
+  left_join(df_demo, by = "ppt_id")
+
+df_participant <- df_comprehension |>
+  group_by(ppt_id, response.age, difficulty) |>
+  summarise(mean_rt = mean(rt, na.rm = TRUE), .groups = "drop")
+
+df_summary <- df_participant |>
+  group_by(response.age, difficulty) |>
+  summarise(mean_rt = mean(mean_rt), .groups = "drop")
+
+ggplot(df_summary, aes(x = response.age, y = mean_rt, colour = factor(difficulty))) +
+  geom_point(size = 3) +
+  geom_smooth(method = "loess", se = FALSE, linewidth = 1) +
+  labs(
+    title = "Reaction Time vs Age\nfor Comprehension Tasks by Difficulty",
+    x = "Age",
+    y = "Mean Reaction Time (ms)",
+    colour = "Difficulty"
+  ) +
+  scale_x_continuous(
+    breaks = seq(floor(min(df_summary$response.age, na.rm = TRUE)),
+                 ceiling(max(df_summary$response.age, na.rm = TRUE)), 1)
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold")
+  )
+```
+```{r}
+df_accuracy <- df_comprehension |>
+  filter(correct == "true") |>
+  group_by(ppt_id) |>
+  summarise(accuracy = n(), .groups = "drop")
+
+df_rt <- df_comprehension |>
+  group_by(ppt_id) |>
+  summarise(mean_rt = mean(rt, na.rm = TRUE), .groups = "drop")
+
+# Merge accuracy and RT
+df_accuracy_rt <- left_join(df_accuracy, df_rt, by = "ppt_id")
+
+# Add age and gender from df_demo
+df_accuracy_rt <- df_accuracy_rt |>
+  left_join(df_demo, by = "ppt_id")
+
+# Plot with multi-color gradient for age and single smooth curve
+ggplot(df_accuracy_rt, aes(x = accuracy, y = mean_rt, colour = response.age, 
+                           shape = response.gender)) +
+  geom_point(size = 3) +
+  geom_smooth(
+    aes(group = 1),
+    method = "loess",
+    se = FALSE,
+    colour = "darkred",
+    linewidth = 1
+  ) +
+  scale_colour_gradientn(
+    colours = rainbow(6),
+    breaks = sort(unique(df_accuracy_rt$response.age))
+  ) +
+  labs(
+    title = "Accuracy vs Reaction Time\n(Comprehension Tasks)",
+    x = "Number Correct (Accuracy)",
+    y = "Mean Reaction Time (ms)",
+    colour = "Age",
+    shape = "Gender"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold")
+  )
+```
+
+
