@@ -38,7 +38,6 @@ ggplot(
   geom_point(size = 3) +
   geom_smooth(linewidth = 1) +
   labs(
-    title = "Production & Comprehension Gap\nthrough Age",
     x = "Age",
     y = "Number Correct",
     colour = "Task"
@@ -86,7 +85,6 @@ ggplot(
     labels = c("Female (dotted)", "Male (solid)")
   ) +
   labs(
-    title = "Production & Comprehension Differences\nConsidering Sex",
     x = "Age",
     y = "Number Correct",
     colour = "Task",
@@ -112,6 +110,7 @@ summary(model)
 df_comprehension <- sample |>
   filter(
     task == "comprehension",
+    correct == "true",
     difficulty != 0,
     rt > 100
   ) |>
@@ -128,9 +127,8 @@ df_summary <- df_participant |>
 
 ggplot(df_summary, aes(x = response.age, y = mean_rt, colour = factor(difficulty))) +
   geom_point(size = 3) +
-  geom_smooth(method = "loess", se = FALSE, linewidth = 1) +
+  geom_smooth(method = "lm", se = FALSE, linewidth = 1) +
   labs(
-    title = "Reaction Time vs Age\nfor Comprehension Tasks by Difficulty",
     x = "Age",
     y = "Mean Reaction Time (ms)",
     colour = "Difficulty"
@@ -145,39 +143,23 @@ ggplot(df_summary, aes(x = response.age, y = mean_rt, colour = factor(difficulty
   )
 ```
 ```{r}
-df_accuracy <- df_comprehension |>
-  filter(correct == "true") |>
-  group_by(ppt_id) |>
-  summarise(accuracy = n(), .groups = "drop")
-
-df_rt <- df_comprehension |>
-  group_by(ppt_id) |>
-  summarise(mean_rt = mean(rt, na.rm = TRUE), .groups = "drop")
-
-# Merge accuracy and RT
-df_accuracy_rt <- left_join(df_accuracy, df_rt, by = "ppt_id")
-
-# Add age and gender from df_demo
+# Convert age to factor so it becomes a discrete variable
 df_accuracy_rt <- df_accuracy_rt |>
-  left_join(df_demo, by = "ppt_id")
+  mutate(response.age = as.factor(response.age))
 
-# Plot with multi-color gradient for age and single smooth curve
+# Plot with individual colors for each age
 ggplot(df_accuracy_rt, aes(x = accuracy, y = mean_rt, colour = response.age, 
                            shape = response.gender)) +
   geom_point(size = 3) +
   geom_smooth(
     aes(group = 1),
-    method = "loess",
+    method = "lm",
     se = FALSE,
     colour = "darkred",
     linewidth = 1
   ) +
-  scale_colour_gradientn(
-    colours = rainbow(6),
-    breaks = sort(unique(df_accuracy_rt$response.age))
-  ) +
+  scale_colour_brewer(palette = "Set1")
   labs(
-    title = "Accuracy vs Reaction Time\n(Comprehension Tasks)",
     x = "Number Correct (Accuracy)",
     y = "Mean Reaction Time (ms)",
     colour = "Age",
@@ -187,6 +169,7 @@ ggplot(df_accuracy_rt, aes(x = accuracy, y = mean_rt, colour = response.age,
   theme(
     plot.title = element_text(hjust = 0.5, face = "bold")
   )
+
 ```
 
 
