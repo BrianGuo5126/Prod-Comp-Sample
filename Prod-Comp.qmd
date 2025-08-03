@@ -3,6 +3,13 @@ title: "Sample"
 format: html
 editor: source
 ---
+```{r}
+library(rmarkdown)
+
+rmarkdown::render("Prod-Comp.qmd")
+
+```
+
 
 ```{r}
 library(tidyverse)
