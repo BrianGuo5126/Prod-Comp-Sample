@@ -267,7 +267,7 @@ ggplot(df_summary, aes(x = factor(response.age), y = proportion, fill = error_ty
   labs(
     x = "Age",
     y = "Proportion of Incorrect Responses",
-    fill = "Error Type"
+    fill = "Error Distance"
   ) +
   theme_minimal(base_size = 14) +
   theme(
