@@ -8,7 +8,7 @@ editor: source
 library(tidyverse)
 library(lme4)
 sample <- read.csv("~/Downloads/prodcompv1.csv") #Change CSV here
-View(sample)
+manifest <- read.csv("~/Downloads/officialmanifest.csv")
 ```
 
 ```{r}
@@ -53,6 +53,7 @@ ggplot(
     plot.title = element_text(hjust = 0.5, face = "bold"),
     legend.position = "right"
   )
+ggsave("prodcompage.jpg", width = 8, height = 6, dpi = 300)
 ```
 ```{r}
 model1 <- lm(n ~ response.age*task,
@@ -101,6 +102,7 @@ ggplot(
   theme(
     plot.title = element_text(hjust = 0.5, face = "bold")
   )
+ggsave("agecorrect.jpg", width = 8, height = 6, dpi = 300)
 ```
 
 ```{r}
@@ -143,6 +145,7 @@ ggplot(df_summary, aes(x = response.age, y = mean_rt, colour = factor(difficulty
   theme(
     plot.title = element_text(hjust = 0.5, face = "bold")
   )
+ggsave("agetime.jpg", width = 8, height = 6, dpi = 300)
 ```
 ```{r}
 df_accuracy <- df_comprehension |>
@@ -171,7 +174,6 @@ ggplot(df_accuracy_rt, aes(x = accuracy, y = mean_rt, colour = response.age,
   geom_smooth(
     aes(group = 1),
     method = "lm",
-    se = FALSE,
     colour = "darkred",
     linewidth = 1
   ) +
@@ -186,7 +188,87 @@ ggplot(df_accuracy_rt, aes(x = accuracy, y = mean_rt, colour = response.age,
   theme(
     plot.title = element_text(hjust = 0.5, face = "bold")
   )
+ggsave("accuracytime.jpg", width = 8, height = 6, dpi = 300)
+```
+```{r}
+df_errors <- sample |>
+  filter(task == "comprehension", rt > 100, correct == "false", !is.na(response)) |>
+  select(label, difficulty, presented_images.0., presented_images.1., 
+         presented_images.2., presented_images.3., response, ppt_id) |>
+  left_join(df_demo, by = "ppt_id") |>
+  filter(!is.na(response.age))
 
+df_errors <- df_errors |>
+  rowwise() |>
+  mutate(
+    response_col = paste0("presented_images.", response, "."),
+    selected_image = ifelse(response_col %in% names(cur_data()),
+                            cur_data()[[response_col]],
+                            NA_character_),
+    selected_word = str_remove(selected_image, "^images/"),
+    selected_word = str_remove(selected_word, "\\.jpg$")
+  ) |>
+  ungroup() |>
+  filter(!is.na(selected_word))
+
+normalize_word <- function(x) {
+  x %>% tolower() %>% str_trim()
+}
+
+df_errors <- df_errors |>
+  mutate(
+    label = normalize_word(label),
+    selected_word = normalize_word(selected_word)
+  )
+
+manifest <- manifest |>
+  mutate(across(c(label, distractor1, distractor2, distractor3), normalize_word))
+
+df_errors <- df_errors |>
+  left_join(manifest, by = "label")
+
+df_errors <- df_errors |>
+  mutate(
+    error_type = case_when(
+      selected_word == distractor1 ~ "Close",
+      selected_word == distractor2 ~ "Medium",
+      selected_word == distractor3 ~ "Far"
+    )
+  )
+
+df_summary <- df_errors |>
+  group_by(response.age, error_type) |>
+  summarise(count = n(), .groups = "drop") |>
+  group_by(response.age) |>
+  mutate(proportion = count / sum(count)) |>
+  ungroup() |>
+  arrange(as.numeric(response.age))
+
+age_counts <- df_errors |>
+  group_by(response.age) |>
+  summarise(n = n_distinct(ppt_id), .groups = "drop") |>
+  mutate(label = paste0("n=", n))
+
+ggplot(df_summary, aes(x = factor(response.age), y = proportion, fill = error_type)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = scales::percent(proportion, accuracy = 0.1)),
+            position = position_stack(vjust = 0.5), size = 4, color = "white") +
+  geom_text(data = age_counts,
+            aes(x = factor(response.age), y = -0.05, label = label),
+            inherit.aes = FALSE, size = 4, color = "black", fontface = "bold") +
+  scale_y_continuous(labels = scales::percent,
+                     limits = c(-0.1, 1)) +
+  labs(
+    x = "Age",
+    y = "Proportion of Incorrect Responses",
+    fill = "Error Type"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    axis.text.x = element_text(vjust = 2)
+  )
+ggsave("agedistance.jpg", width = 8, height = 6, dpi = 300)
 ```
 
 
