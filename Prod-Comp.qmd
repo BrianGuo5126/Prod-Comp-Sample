@@ -4,14 +4,6 @@ format: html
 editor: source
 ---
 ```{r}
-library(rmarkdown)
-
-rmarkdown::render("Prod-Comp.qmd")
-
-```
-
-
-```{r}
 library(tidyverse)
 library(lme4)
 sample <- read.csv("~/Downloads/prodcompv1.csv") #Change CSV here
@@ -60,7 +52,6 @@ ggplot(
     plot.title = element_text(hjust = 0.5, face = "bold"),
     legend.position = "right"
   )
-ggsave("prodcompage.jpg", width = 8, height = 6, dpi = 300)
 ```
 ```{r}
 model1 <- lm(n ~ response.age*task,
@@ -109,7 +100,6 @@ ggplot(
   theme(
     plot.title = element_text(hjust = 0.5, face = "bold")
   )
-ggsave("agecorrect.jpg", width = 8, height = 6, dpi = 300)
 ```
 
 ```{r}
@@ -152,7 +142,6 @@ ggplot(df_summary, aes(x = response.age, y = mean_rt, colour = factor(difficulty
   theme(
     plot.title = element_text(hjust = 0.5, face = "bold")
   )
-ggsave("agetime.jpg", width = 8, height = 6, dpi = 300)
 ```
 ```{r}
 df_accuracy <- df_comprehension |>
@@ -195,7 +184,6 @@ ggplot(df_accuracy_rt, aes(x = accuracy, y = mean_rt, colour = response.age,
   theme(
     plot.title = element_text(hjust = 0.5, face = "bold")
   )
-ggsave("accuracytime.jpg", width = 8, height = 6, dpi = 300)
 ```
 ```{r}
 df_errors <- sample |>
@@ -275,7 +263,6 @@ ggplot(df_summary, aes(x = factor(response.age), y = proportion, fill = error_ty
     plot.title = element_text(hjust = 0.5, face = "bold"),
     axis.text.x = element_text(vjust = 2)
   )
-ggsave("agedistance.jpg", width = 8, height = 6, dpi = 300)
 ```
 
 
