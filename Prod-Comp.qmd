@@ -275,7 +275,7 @@ ggplot(df_summary, aes(x = factor(response.age), y = proportion, fill = error_ty
     axis.text.x = element_text(vjust = 2)
   )
 
-ggsave("ageincorrecttype", width = 8, height = 6, dpi = 300)
+ggsave("ageincorrecttype.jpg", width = 8, height = 6, dpi = 300)
 ```
 
 
