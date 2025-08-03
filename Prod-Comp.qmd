@@ -7,7 +7,7 @@ editor: source
 ```{r}
 library(tidyverse)
 library(lme4)
-sample <- read.csv("~/Downloads/prod-comp-20250715.csv") #Change CSV here
+sample <- read.csv("~/Downloads/prodcompv1.csv") #Change CSV here
 View(sample)
 ```
 
@@ -24,7 +24,9 @@ df_demo <- filter(sample, task != "production", task != "comprehension") |>
 ```
 
 ```{r}
-df_joined <- df_grouped |> left_join(df_demo, join_by(ppt_id)) 
+df_joined <- df_grouped |>
+  left_join(df_demo, join_by(ppt_id)) |>
+  filter(!is.na(response.age))
 ```
 
 ```{r}
@@ -112,7 +114,7 @@ df_comprehension <- sample |>
     task == "comprehension",
     correct == "true",
     difficulty != 0,
-    rt > 100
+    rt > 100,
   ) |>
   select(ppt_id, difficulty, rt, correct) |>
   left_join(df_demo, by = "ppt_id")
@@ -143,9 +145,28 @@ ggplot(df_summary, aes(x = response.age, y = mean_rt, colour = factor(difficulty
   )
 ```
 ```{r}
-# Convert age to factor so it becomes a discrete variable
+# Build df_accuracy_rt first
+df_accuracy <- df_comprehension |>
+  group_by(ppt_id) |>
+  summarise(accuracy = n(), .groups = "drop")
+
+df_rt <- df_comprehension |>
+  group_by(ppt_id) |>
+  summarise(mean_rt = mean(rt, na.rm = TRUE), .groups = "drop")
+
+# Merge accuracy and RT
+df_accuracy_rt <- left_join(df_accuracy, df_rt, by = "ppt_id") |>
+  left_join(df_demo, by = "ppt_id")
+
+# Clean age and convert to factor
 df_accuracy_rt <- df_accuracy_rt |>
-  mutate(response.age = as.factor(response.age))
+  mutate(
+    response.age = as.character(response.age),      # Convert factor → character
+    response.age = na_if(response.age, "na"),       # Replace "na" with NA
+    response.age = as.numeric(response.age)         # Convert to numeric
+  ) |>
+  filter(!is.na(response.age)) |>
+  mutate(response.age = as.factor(response.age))    # Finally make it a factor
 
 # Plot with individual colors for each age
 ggplot(df_accuracy_rt, aes(x = accuracy, y = mean_rt, colour = response.age, 
@@ -158,7 +179,7 @@ ggplot(df_accuracy_rt, aes(x = accuracy, y = mean_rt, colour = response.age,
     colour = "darkred",
     linewidth = 1
   ) +
-  scale_colour_brewer(palette = "Set1")
+  scale_colour_brewer(palette = "Set1") +
   labs(
     x = "Number Correct (Accuracy)",
     y = "Mean Reaction Time (ms)",
