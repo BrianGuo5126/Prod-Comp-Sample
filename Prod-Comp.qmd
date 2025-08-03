@@ -252,6 +252,9 @@ age_counts <- df_errors |>
   summarise(n = n_distinct(ppt_id), .groups = "drop") |>
   mutate(label = paste0("n=", n))
 
+df_summary$error_type <- factor(df_summary$error_type,
+                                levels = c("Far", "Medium", "Close"))
+
 ggplot(df_summary, aes(x = factor(response.age), y = proportion, fill = error_type)) +
   geom_bar(stat = "identity") +
   geom_text(aes(label = scales::percent(proportion, accuracy = 0.1)),
