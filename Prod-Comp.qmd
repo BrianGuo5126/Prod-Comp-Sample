@@ -118,6 +118,7 @@ df_comprehension <- sample |>
     correct == "true",
     difficulty != 0,
     rt > 100,
+    rt < 10000
   ) |>
   select(ppt_id, difficulty, rt, correct) |>
   left_join(df_demo, by = "ppt_id")
@@ -126,12 +127,12 @@ df_participant <- df_comprehension |>
   group_by(ppt_id, response.age, difficulty) |>
   summarise(mean_rt = mean(rt, na.rm = TRUE), .groups = "drop")
 
-df_summary <- df_participant |>
-  group_by(response.age, difficulty) |>
-  summarise(mean_rt = mean(mean_rt), .groups = "drop")
-
-ggplot(df_summary, aes(x = response.age, y = mean_rt, colour = factor(difficulty))) +
-  geom_point(size = 3) +
+ggplot(df_participant, aes(x = response.age, y = mean_rt, colour = factor(difficulty))) +
+  geom_point(
+    size = 2, 
+    alpha = 0.6, 
+    position = position_jitter(width = 0, height = 50) # only vertical jitter
+  ) +
   geom_smooth(method = "lm", se = FALSE, linewidth = 1) +
   labs(
     x = "Age",
@@ -139,8 +140,8 @@ ggplot(df_summary, aes(x = response.age, y = mean_rt, colour = factor(difficulty
     colour = "Difficulty"
   ) +
   scale_x_continuous(
-    breaks = seq(floor(min(df_summary$response.age, na.rm = TRUE)),
-                 ceiling(max(df_summary$response.age, na.rm = TRUE)), 1)
+    breaks = seq(floor(min(df_participant$response.age, na.rm = TRUE)),
+                 ceiling(max(df_participant$response.age, na.rm = TRUE)), 1)
   ) +
   theme_minimal(base_size = 14) +
   theme(
@@ -148,6 +149,7 @@ ggplot(df_summary, aes(x = response.age, y = mean_rt, colour = factor(difficulty
   )
 
 ggsave("agetime.jpg", width = 8, height = 6, dpi = 300)
+
 ```
 ```{r}
 df_accuracy <- df_comprehension |>
